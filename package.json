@@ -1,0 +1,36 @@
+{
+  "name": "stock_mcp",
+  "version": "1.0.0",
+  "description": "Stock Market MCP Server - Upstox & Rupeezy portfolio data for AI analysis",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "inspect": "npx @modelcontextprotocol/inspector node dist/index.js"
+  },
+  "keywords": [
+    "mcp",
+    "stock",
+    "upstox",
+    "rupeezy",
+    "portfolio"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "@rupeezy/jsvortex": "^2.0.2",
+    "dotenv": "^16.4.0",
+    "upstox-js-sdk": "^2.19.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  },
+  "packageManager": "pnpm@10.15.0"
+}
