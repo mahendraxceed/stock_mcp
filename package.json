@@ -21,10 +21,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.0",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "@rupeezy/jsvortex": "^2.0.2",
     "dotenv": "^16.4.0",
-    "upstox-js-sdk": "^2.19.0",
+    "express": "^5.2.1",
+    "upstox-js-sdk": "^2.21.0",
     "zod": "^3.25.0"
   },
   "devDependencies": {

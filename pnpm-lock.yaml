@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       '@modelcontextprotocol/sdk':
-        specifier: ^1.17.0
+        specifier: ^1.26.0
         version: 1.26.0(zod@3.25.76)
       '@rupeezy/jsvortex':
         specifier: ^2.0.2
@@ -17,8 +17,11 @@ importers:
       dotenv:
         specifier: ^16.4.0
         version: 16.6.1
+      express:
+        specifier: ^5.2.1
+        version: 5.2.1
       upstox-js-sdk:
-        specifier: ^2.19.0
+        specifier: ^2.21.0
         version: 2.21.0(@babel/core@7.29.0)
       zod:
         specifier: ^3.25.0
