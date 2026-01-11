@@ -1,5 +1,4 @@
-import express from "express";
-import type { Request, Response } from "express";
+import express, { type Express, type Request, type Response } from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import type { AppConfig } from "./config.js";
@@ -13,9 +12,10 @@ import { MarketService } from "./services/market.service.js";
 import { FundsService } from "./services/funds.service.js";
 import { AnalysisService } from "./services/analysis.service.js";
 import { registerAllTools } from "./tools/register-all.js";
+import { renderDashboard } from "./dashboard.js";
 import { logger } from "./utils/logger.js";
 
-export function createApp(config: AppConfig) {
+export function createApp(config: AppConfig): Express {
   const app = express();
   app.use(express.json());
 
@@ -149,6 +149,104 @@ export function createApp(config: AppConfig) {
     }
   });
 
+  // ─── REST API for Tool Testing ──────────────────────────────────────
+
+  function getServices() {
+    return {
+      portfolio: new PortfolioService(brokers),
+      market: new MarketService(brokers),
+      funds: new FundsService(brokers),
+      analysis: new AnalysisService(brokers),
+    };
+  }
+
+  app.get("/api/portfolio", async (req: Request, res: Response) => {
+    try {
+      const broker = (req.query.broker as string) || "all";
+      const s = getServices();
+      const holdings = await s.portfolio.getHoldings(broker as any);
+      const totalInvested = holdings.reduce((s, h) => s + h.investedValue, 0);
+      const currentValue = holdings.reduce((s, h) => s + h.currentValue, 0);
+      res.json({
+        totalHoldings: holdings.length,
+        totalInvested: Math.round(totalInvested * 100) / 100,
+        currentValue: Math.round(currentValue * 100) / 100,
+        totalPnl: Math.round((currentValue - totalInvested) * 100) / 100,
+        holdings,
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/positions", async (req: Request, res: Response) => {
+    try {
+      const broker = (req.query.broker as string) || "all";
+      const s = getServices();
+      const positions = await s.portfolio.getPositions(broker as any);
+      res.json({ totalPositions: positions.length, positions });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/funds", async (req: Request, res: Response) => {
+    try {
+      const broker = (req.query.broker as string) || "all";
+      const s = getServices();
+      const funds = await s.funds.getFunds(broker as any);
+      res.json(funds);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/analysis", async (req: Request, res: Response) => {
+    try {
+      const broker = (req.query.broker as string) || "all";
+      const s = getServices();
+      const result = await s.analysis.analyzePortfolio(broker as any);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/quote", async (req: Request, res: Response) => {
+    try {
+      const instruments = ((req.query.instruments as string) || "").split(",").filter(Boolean);
+      const broker = (req.query.broker as string) || "upstox";
+      if (!instruments.length) {
+        res.status(400).json({ error: "instruments parameter required" });
+        return;
+      }
+      const s = getServices();
+      const quotes = await s.market.getQuotes(instruments, broker as any);
+      res.json(quotes);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/history", async (req: Request, res: Response) => {
+    try {
+      const instrument = req.query.instrument as string;
+      const interval = (req.query.interval as string) || "day";
+      const from = req.query.from as string;
+      const to = req.query.to as string;
+      const broker = (req.query.broker as string) || "upstox";
+      if (!instrument || !from || !to) {
+        res.status(400).json({ error: "instrument, from, and to parameters required" });
+        return;
+      }
+      const s = getServices();
+      const candles = await s.market.getHistoricalData(instrument, interval, from, to, broker as any);
+      res.json({ totalCandles: candles.length, candles });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // ─── Status & Dashboard ────────────────────────────────────────────
 
   app.get("/auth/status", (req: Request, res: Response) => {
@@ -162,60 +260,14 @@ export function createApp(config: AppConfig) {
   });
 
   app.get("/", (req: Request, res: Response) => {
-    const upstoxStatus = brokers.has("upstox");
-    const rupeezyStatus = brokers.has("rupeezy");
-
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Stock MCP Server</title>
-        <style>
-          body { font-family: system-ui, sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; }
-          .status { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
-          .connected { background: #22c55e; }
-          .disconnected { background: #ef4444; }
-          .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 12px 0; }
-          a.btn { display: inline-block; padding: 8px 16px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px; }
-          a.btn:hover { background: #2563eb; }
-          code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 14px; }
-        </style>
-      </head>
-      <body>
-        <h1>Stock MCP Server</h1>
-
-        <div class="card">
-          <h3>
-            <span class="status ${upstoxStatus ? "connected" : "disconnected"}"></span>
-            Upstox — ${upstoxStatus ? "Connected" : "Not connected"}
-          </h3>
-          ${upstoxStatus
-            ? "<p>Broker is active.</p>"
-            : '<a class="btn" href="/auth/upstox">Connect Upstox</a>'}
-        </div>
-
-        <div class="card">
-          <h3>
-            <span class="status ${rupeezyStatus ? "connected" : "disconnected"}"></span>
-            Rupeezy — ${rupeezyStatus ? "Connected" : "Not connected"}
-          </h3>
-          ${rupeezyStatus
-            ? "<p>Broker is active.</p>"
-            : '<a class="btn" href="/auth/rupeezy">Connect Rupeezy</a>'}
-        </div>
-
-        <div class="card">
-          <h3>MCP Endpoint</h3>
-          <p>SSE: <code>http://localhost:${config.port}/sse</code></p>
-          <p>Connect via: <code>npx mcp-remote http://localhost:${config.port}/sse</code></p>
-        </div>
-
-        <div class="card">
-          <h3>Active SSE Sessions: ${transports.size}</h3>
-        </div>
-      </body>
-      </html>
-    `);
+    res.send(
+      renderDashboard({
+        port: config.port,
+        upstox: brokers.has("upstox"),
+        rupeezy: brokers.has("rupeezy"),
+        sessions: transports.size,
+      })
+    );
   });
 
   return app;

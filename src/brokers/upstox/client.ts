@@ -122,9 +122,17 @@ export class UpstoxBroker implements IBroker {
   }
 
   private extractError(error: any): string {
-    if (typeof error === "string") return error;
-    if (error?.response?.body?.message) return error.response.body.message;
-    if (error?.message) return error.message;
-    return JSON.stringify(error);
+    const status = error?.status ?? error?.response?.status;
+    const body = error?.response?.body;
+    const msg =
+      body?.errors?.[0]?.message ??
+      body?.message ??
+      error?.message ??
+      (typeof error === "string" ? error : JSON.stringify(error));
+
+    if (status === 401 || /unauthorized|invalid token|token.*expired/i.test(msg)) {
+      return `Upstox token expired or invalid. Re-authenticate at /auth/upstox. (${msg})`;
+    }
+    return msg;
   }
 }
