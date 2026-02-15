@@ -10,6 +10,7 @@
 [![License](https://img.shields.io/badge/License-ISC-22c55e?style=for-the-badge)](LICENSE)
 
 Connect **Upstox** & **Rupeezy** broker accounts to **Claude Code** and **Cursor** for real-time portfolio insights.
+![Demo](./assets/demo.gif)
 
 [Getting Started](#-quick-start) · [MCP Prompts](#-mcp-prompt-examples) · [Tools](#-tools) · [Dashboard](#-dashboard)
 
