@@ -12,7 +12,7 @@ import { MarketService } from "./services/market.service.js";
 import { FundsService } from "./services/funds.service.js";
 import { AnalysisService } from "./services/analysis.service.js";
 import { registerAllTools } from "./tools/register-all.js";
-import { renderDashboard } from "./dashboard.js";
+import { renderDashboard } from "./views/index.js";
 import { logger } from "./utils/logger.js";
 
 export function createApp(config: AppConfig): Express {
